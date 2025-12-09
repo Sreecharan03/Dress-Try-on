@@ -1,19 +1,20 @@
 import sys
 
 import numpy as np
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+import tf_slim as slim
 
 from pose import common
 
 DEFAULT_PADDING = 'SAME'
 
 
-_init_xavier = tf.contrib.layers.xavier_initializer()
-_init_norm = tf.truncated_normal_initializer(stddev=0.01)
-_init_zero = slim.init_ops.zeros_initializer()
-_l2_regularizer_00004 = tf.contrib.layers.l2_regularizer(0.00004)
-_l2_regularizer_convb = tf.contrib.layers.l2_regularizer(common.regularizer_conv)
+_init_xavier = tf.keras.initializers.glorot_normal()
+_init_norm = tf.keras.initializers.TruncatedNormal(stddev=0.01)
+_init_zero = tf.keras.initializers.Zeros()
+_l2_regularizer_00004 = tf.keras.regularizers.l2(0.00004)
+_l2_regularizer_convb = tf.keras.regularizers.l2(common.regularizer_conv)
 
 
 def layer(op):
@@ -102,7 +103,7 @@ class BaseNetwork(object):
         self.terminals = []
         for fed_layer in args:
             try:
-                is_str = isinstance(fed_layer, basestring)
+                is_str = isinstance(fed_layer, str)
             except NameError:
                 is_str = isinstance(fed_layer, str)
             if is_str:
@@ -132,7 +133,7 @@ class BaseNetwork(object):
 
     def make_var(self, name, shape, trainable=True):
         '''Creates a new TensorFlow variable.'''
-        return tf.get_variable(name, shape, trainable=self.trainable & trainable, initializer=tf.contrib.layers.xavier_initializer())
+        return tf.get_variable(name, shape, trainable=self.trainable & trainable, initializer=tf.keras.initializers.glorot_normal())
 
     def validate_padding(self, padding):
         '''Verifies that the padding is one of the supported ones.'''
@@ -171,7 +172,7 @@ class BaseNetwork(object):
                                                   num_outputs=None,
                                                   stride=stride,
                                                   trainable=self.trainable,
-                                                  depth_multiplier=1.0,
+                                                  depth_multiplier=int(1.0),
                                                   kernel_size=[k_h, k_w],
                                                   # activation_fn=common.activation_fn if relu else None,
                                                   activation_fn=None,
@@ -179,7 +180,7 @@ class BaseNetwork(object):
                                                   weights_initializer=_init_xavier,
                                                   # weights_initializer=_init_norm,
                                                   weights_regularizer=_l2_regularizer_00004,
-                                                  biases_initializer=None,
+                                                  biases_initializer=_init_zero,
                                                   padding=DEFAULT_PADDING,
                                                   scope=name + '_depthwise')
 
@@ -190,7 +191,7 @@ class BaseNetwork(object):
                                         activation_fn=common.activation_fn if relu else None,
                                         weights_initializer=_init_xavier,
                                         # weights_initializer=_init_norm,
-                                        biases_initializer=_init_zero if set_bias else None,
+                                        biases_initializer=_init_zero if set_bias else _init_zero,
                                         normalizer_fn=slim.batch_norm,
                                         trainable=self.trainable,
                                         weights_regularizer=None,
@@ -207,7 +208,7 @@ class BaseNetwork(object):
                                         weights_regularizer=_l2_regularizer_convb,
                                         weights_initializer=_init_xavier,
                                         # weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                        biases_initializer=_init_zero if set_bias else None,
+                                        biases_initializer=_init_zero if set_bias else _init_zero,
                                         trainable=self.trainable,
                                         activation_fn=common.activation_fn if relu else None,
                                         scope=name)
@@ -319,7 +320,7 @@ class BaseNetwork(object):
 
     @layer
     def softmax(self, input, name):
-        input_shape = map(lambda v: v.value, input.get_shape())
+        input_shape = list(map(lambda v: v.value, input.get_shape()))
         if len(input_shape) > 2:
             # For certain models (like NiN), the singleton spatial dimensions
             # need to be explicitly squeezed, since they're not broadcast-able

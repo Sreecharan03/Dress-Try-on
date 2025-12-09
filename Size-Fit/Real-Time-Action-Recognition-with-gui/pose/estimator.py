@@ -5,7 +5,8 @@ from collections import namedtuple
 
 import cv2
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from scipy.ndimage import maximum_filter, gaussian_filter
 cam10=cv2.VideoCapture(0)
 #cam10=cv2.VideoCapture('rtsp://admin:rashmi2018@192.168.51.162/PSIA/streaming/channels/102')
@@ -120,7 +121,7 @@ class PoseEstimator:
         'idx1', 'idx2',
         'coord1', 'coord2',
         'score1', 'score2'
-    ], verbose=False)
+    ])
 
     def __init__(self):
         pass
